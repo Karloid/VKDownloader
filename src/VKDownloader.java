@@ -1,9 +1,9 @@
 
 import com.google.gson.Gson;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
@@ -14,7 +14,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Map;
@@ -65,11 +65,11 @@ public class VKDownloader {
         uid = (String) properties.get(UID);
     }
 
-    public void getAlbums() {
+    public void getAlbums(String paramUid) {
         try {
             URIBuilder builder = new URIBuilder();
             builder.setScheme("https").setHost(HOST).setPath(GET_ALBUMS_PATH)
-                    .setParameter("uid", uid)
+                    .setParameter("uid", (paramUid == null ? uid : paramUid))
                     .setParameter(ACCESS_TOKEN, accessToken);
 
             URI uri = builder.build();
@@ -160,7 +160,7 @@ public class VKDownloader {
 
 
                 parseAndSaveToAlbum(result, album);
-                break;
+                //break;
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -199,7 +199,17 @@ public class VKDownloader {
             System.out.println("created folder: " + folder.getAbsolutePath() + " " + success);
 
             for (Photo photo : album.getPhotos()) {
-
+                File dest = new File(folder.getAbsolutePath() + "/" + photo.getFileName());
+                if (!dest.exists()) {
+                    try {
+                        FileUtils.copyURLToFile(new URL(photo.getSrc()), dest);
+                        System.out.println(photo.getFileName() + " done");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    System.out.println(photo.getFileName() + " already exists");
+                }
             }
         }
 

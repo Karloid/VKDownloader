@@ -59,4 +59,10 @@ public class Photo {
     public Album getAlbum() {
         return album;
     }
+
+    public String getFileName() {
+        String[] split = src.split("/");
+
+        return split[split.length - 1];
+    }
 }
