@@ -6,8 +6,8 @@ import core.VKDownloader;
 public class TestDrive {
 
     public static void main(String[] args) throws Exception {
-      //  testPhoto();
-        testAudio();
+        testPhoto();
+      //  testAudio();
     }
 
     private static void testAudio() {
@@ -23,8 +23,8 @@ public class TestDrive {
         VKDownloader vkDownloader = new VKDownloader();
         vkDownloader.init();
         vkDownloader.setAccessToken("xx");
-        String paramUid = null;
-        String paramGid = String.valueOf(1);
+        String paramUid = String.valueOf(1);
+        String paramGid = null;
         vkDownloader.getAlbums(paramUid, paramGid);
         vkDownloader.getAlbumsPhotos(paramUid, paramGid);
         vkDownloader.saveAlbumsPhotos("albums/");

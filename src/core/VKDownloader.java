@@ -22,6 +22,7 @@ import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by Andrey on 7/10/2014.
@@ -203,7 +204,7 @@ public class VKDownloader {
             }
             photo.setSrc(src);
             photo.setLikes(((Double) ((Map) (photoMap.get(LIKES))).get(COUNT)).intValue());
-            photo.setCreated(new Date(((Double) photoMap.get(CREATED)).longValue()));
+            photo.setCreated(new Date(((Double) photoMap.get(CREATED)).longValue() * 1000));
             photo.setAlbum(album);
             album.addPhoto(photo);
             System.out.println(photo);
@@ -212,25 +213,29 @@ public class VKDownloader {
     }
 
     public void saveAlbumsPhotos(String folderToSave) {
+        ExecutorService executor = Executors.newFixedThreadPool(nThreads);
         for (Album album : albums) {
             File folder = new File(folderToSave + album.getAid() + "_" + album.getTitle());
             boolean success = folder.mkdirs();
             System.out.println("created folder: " + folder.getAbsolutePath() + " " + success);
-
             for (Photo photo : album.getPhotos()) {
                 File dest = new File(folder.getAbsolutePath() + "/" + photo.getFileName());
-                if (!dest.exists()) {
-                    try {
-                        FileUtils.copyURLToFile(new URL(photo.getSrc()), dest);
-                        System.out.println(photo.getFileName() + " done");
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+
+                if (!dest.exists() || dest.length() < 100) {
+                    executor.execute(new Downloader(photo.getSrc(), dest));
+
                 } else {
-                    System.out.println(photo.getFileName() + " already exists");
+                    System.out.println(dest + " already exists");
                 }
             }
         }
+        executor.shutdown();
+        try {
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.println("All photos try to download.");
 
     }
 
@@ -297,14 +302,13 @@ public class VKDownloader {
                 System.out.println(dest + " already exists");
             }
         }
-        while (!executor.isTerminated()) {
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        executor.shutdown();
+        try {
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
-        System.out.println("All tracks try to download;");
+        System.out.println("All tracks try to download.");
 
 
     }
@@ -332,13 +336,14 @@ public class VKDownloader {
 
         @Override
         public void run() {
-            System.out.println("try download: " + dest);
+            System.out.println(dest + " try download ");
             try {
                 FileUtils.copyURLToFile(new URL(url), dest);
                 System.out.println(dest + " done");
             } catch (IOException e) {
                 System.out.println(dest + " error: ");
                 e.printStackTrace();
+                System.out.println(dest + " Deleting! " + dest.delete());
             }
         }
     }
