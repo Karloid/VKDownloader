@@ -1,3 +1,5 @@
+package core;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,7 +15,7 @@ public class Album {
 
     @Override
     public String toString() {
-        return "Album{" +
+        return "core.Album{" +
                 "aid=" + aid +
                 ", title='" + title + '\'' +
                 ", description='" + description + '\'' +

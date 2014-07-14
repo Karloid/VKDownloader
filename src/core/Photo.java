@@ -1,3 +1,5 @@
+package core;
+
 import java.util.Date;
 
 /**
@@ -16,7 +18,7 @@ public class Photo {
 
     @Override
     public String toString() {
-        return "Photo{" +
+        return "core.Photo{" +
                 "text='" + text + '\'' +
                 ", src='" + src + '\'' +
                 ", likes=" + likes +
