@@ -211,8 +211,49 @@ public class VkontaktePanel extends JPanel {
         return true;
     }
 
-    private void saveAudio() {
+    private void saveAudio() {      /*
+        VKDownloader vkDownloader = new VKDownloader();
+        vkDownloader.init();
+        vkDownloader.setAccessToken(accessTokenField.getText());
+        String paramUid = null;
+        String paramGid = null;
+
+        String tmpId = idField.getText();
+        if (idTypeComboBox.getSelectedItem().equals(IdType.USER)) {
+            paramUid = tmpId;
+        } else {
+            idTypeComboBox.getSelectedItem().equals(IdType.GROUP);
+            paramGid = tmpId;
+        }
+        String folderToSave = destField.getText();
+        vkDownloader.downloadAllPhotos(paramUid, paramGid, folderToSave);
+        JOptionPane.showMessageDialog(null, "Downloaded " + vkDownloader.getDownloadedPhotosCount() + " files to "+ destField.getText());
+        */
+
         System.out.println("save audio");
+        if (!validateFields()) {
+            System.out.println("Validate error");
+            return;
+        }
+        VKDownloader vkDownloader = new VKDownloader();
+        vkDownloader.setAccessToken(accessTokenField.getText());
+        String paramUid = null;
+        String paramGid = null;
+
+        String tmpId = idField.getText();
+        if (idTypeComboBox.getSelectedItem().equals(IdType.USER)) {
+            paramUid = tmpId;
+        } else {
+            idTypeComboBox.getSelectedItem().equals(IdType.GROUP);
+            paramGid = tmpId;
+        }
+        vkDownloader.getTracks(paramUid, paramGid);
+        String folderToSave = destField.getText();
+        vkDownloader.saveTracksMultithreading(folderToSave);
+        JOptionPane.showMessageDialog(null, "Downloaded " + vkDownloader.getDownloadedTracksCount() + " files to "+ destField.getText());
+
+
+
     }
 
 

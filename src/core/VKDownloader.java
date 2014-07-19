@@ -60,7 +60,7 @@ public class VKDownloader {
     private String uid;
     private ArrayList<Album> albums;
     private List<Track> tracks;
-    private int nThreads = 50;
+    private int nThreads = 10;
 
     public void init() {
         loadProperties();
@@ -410,6 +410,10 @@ public class VKDownloader {
             count += album.getPhotos().size();
         }
         return count;
+    }
+
+    public int getDownloadedTracksCount() {
+        return tracks.size();
     }
 
     private class Downloader implements Runnable {
