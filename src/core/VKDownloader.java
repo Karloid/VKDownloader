@@ -1,7 +1,6 @@
 package core;
 
 import com.google.gson.Gson;
-import org.apache.commons.codec.binary.StringUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
@@ -10,7 +9,6 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.DefaultHttpClient;
-import sun.nio.ch.ThreadPool;
 
 import java.io.File;
 import java.io.FileReader;
@@ -19,7 +17,6 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.util.*;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -54,13 +51,16 @@ public class VKDownloader {
     public static final String ITEMS = "items";
     public static final String URL = "url";
     public static final int MINIMUM_TRACK_SIZE = 2000;
+    private static final String PHOTOS_GET_PROFILE = "/method/photos.getAll";
+    private static final String OFFSET = "offset";
+    private static final long DELAY_BETWEEN_REQUESTS = 300;
     private Properties properties;
     private String accessToken;
     private String appId;
     private String uid;
     private ArrayList<Album> albums;
     private List<Track> tracks;
-    private int nThreads = 5;
+    private int nThreads = 50;
 
     public void init() {
         loadProperties();
@@ -91,7 +91,7 @@ public class VKDownloader {
             URI uri = builder.build();
             HttpGet httpGet = new HttpGet(uri);
             String result = makeRequest(httpGet);
-
+            System.out.println("getAlbums: " + uri.toString());
             System.out.println("getAlbums" + result);
 
             parseAlbums(result);
@@ -159,6 +159,60 @@ public class VKDownloader {
         return "nothing";
     }
 
+    public void downloadAllPhotos(String paramUid, String paramGid, String folderToSave) {
+        log("getAlbums...");
+        getAlbums(paramUid, paramGid);
+        log("getAlbumsPhotos...");
+        getAlbumsPhotos(paramUid, paramGid);
+        log("getOtherPhotos");
+        getOtherPhotos(paramUid, paramGid);
+        log("saveAlbumsPhotos...");
+        saveAlbumsPhotos(folderToSave);
+    }
+
+    private void getOtherPhotos(String paramUid, String paramGid) {
+        int currentIndex = 0;
+        int maxIndex = 1000;
+        int count = 99;
+        Album profileAlbum = new Album();
+        profileAlbum.setAid(0);
+        profileAlbum.setTitle("Other");
+        albums.add(profileAlbum);
+        while (currentIndex < maxIndex) {
+            try {
+                URIBuilder builder = new URIBuilder();
+                builder.setScheme("https").setHost(HOST).setPath(PHOTOS_GET_PROFILE)
+                        .setParameter(OFFSET, currentIndex + "")
+                        .setParameter(EXTENDED, "1")
+                        .setParameter(COUNT, count + "")
+                                //       .setParameter(PHOTO_SIZES, "0")
+                        .setParameter(ACCESS_TOKEN, accessToken);
+                if (paramUid != null) {
+                    builder.setParameter(OWNER_ID, paramUid);
+                } else {
+                    builder.setParameter(OWNER_ID, "-" + paramGid);
+                }
+                URI uri = builder.build();
+                HttpGet httpGet = new HttpGet(uri);
+                String result = makeRequest(httpGet);
+                System.out.println(uri.toString());
+                System.out.println(result);
+
+                maxIndex = parseAndSaveToAlbum(result, profileAlbum, true);
+
+                currentIndex += count;
+                Thread.sleep(DELAY_BETWEEN_REQUESTS);
+                //break;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void log(String message) {
+        System.out.println(message);
+    }
+
     public void getAlbumsPhotos(String paramUid, String paramGid) {
         for (Album album : albums) {
             try {
@@ -179,17 +233,29 @@ public class VKDownloader {
                 String result = makeRequest(httpGet);
 
                 System.out.println(result);
-                parseAndSaveToAlbum(result, album);
-                //break;
+                parseAndSaveToAlbum(result, album, false);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
     }
 
-    private void parseAndSaveToAlbum(String result, Album album) {
+    private int parseAndSaveToAlbum(String result, Album album, boolean firstElementCount) {
+        int count = 0;
         Map root = new Gson().fromJson(result, Map.class);
-        ArrayList<Map<String, Object>> photosMaps = (ArrayList<Map<String, Object>>) root.get(RESPONSE);
+        ArrayList<Object> photosMapsTmp = (ArrayList<Object>) root.get(RESPONSE);
+        if (firstElementCount) {
+            count = ((Double) photosMapsTmp.get(0)).intValue();
+            photosMapsTmp.remove(0);
+        }
+
+        ArrayList<Map<String, Object>> photosMaps = new ArrayList<>();
+        for (Object obj : photosMapsTmp) {
+            System.out.println("obj : " + obj);
+            photosMaps.add((Map<String, Object>) obj);
+        }
+        ;
+        // ArrayList<Map<String, Object>> photosMaps = (ArrayList<Map<String, Object>>) root.get(RESPONSE);
         for (Map photoMap : photosMaps) {
 
             Photo photo = new Photo();
@@ -206,10 +272,24 @@ public class VKDownloader {
             photo.setLikes(((Double) ((Map) (photoMap.get(LIKES))).get(COUNT)).intValue());
             photo.setCreated(new Date(((Double) photoMap.get(CREATED)).longValue() * 1000));
             photo.setAlbum(album);
-            album.addPhoto(photo);
-            System.out.println(photo);
+            if (!photoContainsInAlbums(photo)) {
+                album.addPhoto(photo);
+                System.out.println(photo);
+            }
         }
+        return count;
 
+    }
+
+    private boolean photoContainsInAlbums(Photo photo) {
+        for (Album album : albums) {
+            for (Photo photoForEach : album.getPhotos()) {
+                if (photo.equals(photoForEach)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public void saveAlbumsPhotos(String folderToSave) {
@@ -322,6 +402,14 @@ public class VKDownloader {
         }
         // амперсанд в названиях передаётся как '& amp', приводим его к читаемому виду
         return result;
+    }
+
+    public int getDownloadedPhotosCount() {
+        int count = 0;
+        for (Album album : albums) {
+            count += album.getPhotos().size();
+        }
+        return count;
     }
 
     private class Downloader implements Runnable {

@@ -6,27 +6,31 @@ import core.VKDownloader;
 public class TestDrive {
 
     public static void main(String[] args) throws Exception {
-        testPhoto();
-      //  testAudio();
+      //  testPhoto();
+        testAudio();
     }
 
     private static void testAudio() {
         VKDownloader vkDownloader = new VKDownloader();
         vkDownloader.setAccessToken("xx");
-        String paramUid = String.valueOf(1);
+        String paramUid = "xx";
         String paramGid = null;
         vkDownloader.getTracks(paramUid, paramGid);
-        vkDownloader.saveTracksMultithreading("audioFolder");
+        vkDownloader.saveTracksMultithreading("xx");
     }
 
     private static void testPhoto() {
         VKDownloader vkDownloader = new VKDownloader();
         vkDownloader.init();
         vkDownloader.setAccessToken("xx");
-        String paramUid = String.valueOf(1);
+        String paramUid = "xx";
         String paramGid = null;
+        String folderToSave = "xx/";
+        System.out.println("getAlbums...");
         vkDownloader.getAlbums(paramUid, paramGid);
+        System.out.println("getAlbumsPhotos...");
         vkDownloader.getAlbumsPhotos(paramUid, paramGid);
-        vkDownloader.saveAlbumsPhotos("albums/");
+        System.out.println("saveAlbumsPhotos...");
+        vkDownloader.saveAlbumsPhotos(folderToSave);
     }
 }

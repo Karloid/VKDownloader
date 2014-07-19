@@ -1,5 +1,6 @@
 package core;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
@@ -11,6 +12,29 @@ public class Photo {
     private int likes;
     private Date created;
     private Album album;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Photo photo = (Photo) o;
+
+        if (src != null ? !src.equals(photo.src) : photo.src != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return src != null ? src.hashCode() : 0;
+    }
+
+    private static final SimpleDateFormat sdf;
+
+    static {
+        sdf = new SimpleDateFormat("yyyy-MM-dd");
+    }
 
     public void setText(String text) {
         this.text = text;
@@ -62,10 +86,9 @@ public class Photo {
         return album;
     }
 
-    public String getFileName()
-    {
-        //String[] split = src.split("/");
-        return created.toString().replaceAll(":", "-") + ".jpg";
+    public String getFileName() {
+        String[] split = src.split("/");
+        return sdf.format(created) + " " + split[split.length - 1];
         //return split[split.length - 1];
     }
 }
