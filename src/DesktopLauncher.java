@@ -14,7 +14,7 @@ public class DesktopLauncher {
 
     private static void createGUI() {
         UIManager.put("swing.boldMetal", Boolean.FALSE);
-        JFrame frame = new JFrame("Amazing downloader");
+        JFrame frame = new JFrame("VK Downloader");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         frame.add(new MyJTabbedPanel(), BorderLayout.CENTER);
