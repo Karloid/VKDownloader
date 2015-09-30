@@ -109,7 +109,6 @@ public class VKDownloader {
         for (Map albumMap : albumsMaps) {
             Double aid = (Double) albumMap.get(AID);
             long aidLong = aid.longValue();
-
             Album album = new Album();
             album.setAid(aidLong);
             album.setTitle((String) albumMap.get(TITLE));
