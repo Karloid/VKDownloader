@@ -21,9 +21,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Created by Andrey on 7/10/2014.
- */
+
 public class VKDownloader {
     public static final String ACCESS_TOKEN = "access_token";
     private static final String APP_ID = "app_id";
