@@ -54,6 +54,7 @@ public class VKDownloader {
     private static final String PHOTOS_GET_PROFILE = "/method/photos.getAll";
     private static final String OFFSET = "offset";
     private static final long DELAY_BETWEEN_REQUESTS = 300;
+    public static final int ERROR_CODE_TOO_MANY_REQUESTS = 6;
     private Properties properties;
     private String accessToken;
     private String appId;
@@ -81,7 +82,9 @@ public class VKDownloader {
     public void getAlbums(String paramUid, String paramGid) {
         try {
             URIBuilder builder = new URIBuilder();
-            builder.setScheme("https").setHost(HOST).setPath(GET_ALBUMS_PATH)
+            builder.setScheme("https")
+                    .setHost(HOST)
+                    .setPath(GET_ALBUMS_PATH)
                     .setParameter(ACCESS_TOKEN, accessToken);
             if (paramUid != null) {
                 builder.setParameter(UID, paramUid);
@@ -90,7 +93,7 @@ public class VKDownloader {
             }
             URI uri = builder.build();
             HttpGet httpGet = new HttpGet(uri);
-            String result = makeRequest(httpGet);
+            Map result = makeRequest(httpGet);
             System.out.println("getAlbums: " + uri.toString());
             System.out.println("getAlbums" + result);
 
@@ -102,9 +105,8 @@ public class VKDownloader {
 
     }
 
-    private void parseAlbums(String result) {
+    private void parseAlbums(Map root) {
         albums = new ArrayList<Album>();
-        Map root = new Gson().fromJson(result, Map.class);
         ArrayList<Map<String, Object>> albumsMaps = (ArrayList<Map<String, Object>>) root.get(RESPONSE);
         for (Map albumMap : albumsMaps) {
             Double aid = (Double) albumMap.get(AID);
@@ -134,28 +136,38 @@ public class VKDownloader {
 
     }
 
-    private String makeRequest(HttpGet httpGet) {
+    private Map makeRequest(HttpGet httpGet) {
         InputStream inputStream = null;
-        try {
-            HttpClient httpClient = new DefaultHttpClient();
-            HttpResponse response = httpClient.execute(httpGet);
-            HttpEntity entity = response.getEntity();
-            if (entity != null) {
-                inputStream = entity.getContent();
-                String resposneAsString = null;
-                resposneAsString = IOUtils.toString(inputStream);
-                return resposneAsString;
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
+        for (int i = 0; i < 15; i++) { // try some times
             try {
-                inputStream.close();
-            } catch (IOException e) {
+                HttpClient httpClient = new DefaultHttpClient();
+                HttpResponse response = httpClient.execute(httpGet);
+                HttpEntity entity = response.getEntity();
+                if (entity != null) {
+                    inputStream = entity.getContent();
+                    String resposneAsString = null;
+                    resposneAsString = IOUtils.toString(inputStream);
+                    Map result = new Gson().fromJson(resposneAsString, Map.class);
+                    Map error = (Map) result.get("error");
+                    if (error == null || (Double) error.get("error_code") != ERROR_CODE_TOO_MANY_REQUESTS) {
+                        return result;
+                    } else {
+                        System.out.println("* got too many requests error try sleep two seconds");
+                        TimeUnit.SECONDS.sleep(2);
+                    }
+                }
+            } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
+            } finally {
+                try {
+                    assert inputStream != null;
+                    inputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
-        return "nothing";
+        return null; //so bad :(
     }
 
     public void downloadAllPhotos(String paramUid, String paramGid, String folderToSave) {
@@ -184,7 +196,7 @@ public class VKDownloader {
                         .setParameter(OFFSET, currentIndex + "")
                         .setParameter(EXTENDED, "1")
                         .setParameter(COUNT, count + "")
-                                //       .setParameter(PHOTO_SIZES, "0")
+                        //       .setParameter(PHOTO_SIZES, "0")
                         .setParameter(ACCESS_TOKEN, accessToken);
                 if (paramUid != null) {
                     builder.setParameter(OWNER_ID, paramUid);
@@ -193,7 +205,7 @@ public class VKDownloader {
                 }
                 URI uri = builder.build();
                 HttpGet httpGet = new HttpGet(uri);
-                String result = makeRequest(httpGet);
+                Map result = makeRequest(httpGet);
                 System.out.println(uri.toString());
                 System.out.println(result);
 
@@ -216,8 +228,9 @@ public class VKDownloader {
         for (Album album : albums) {
             try {
                 URIBuilder builder = new URIBuilder();
-                builder.setScheme("https").setHost(HOST).setPath(PHOTOS_GET)
-
+                builder.setScheme("https")
+                        .setHost(HOST)
+                        .setPath(PHOTOS_GET)
                         .setParameter(AID, album.getAid() + "")
                         .setParameter(EXTENDED, "1")
                         .setParameter(PHOTO_SIZES, "0")
@@ -229,7 +242,7 @@ public class VKDownloader {
                 }
                 URI uri = builder.build();
                 HttpGet httpGet = new HttpGet(uri);
-                String result = makeRequest(httpGet);
+                Map result = makeRequest(httpGet);
 
                 System.out.println(result);
                 parseAndSaveToAlbum(result, album, false);
@@ -239,9 +252,8 @@ public class VKDownloader {
         }
     }
 
-    private int parseAndSaveToAlbum(String result, Album album, boolean firstElementCount) {
+    private int parseAndSaveToAlbum(Map root, Album album, boolean firstElementCount) {
         int count = 0;
-        Map root = new Gson().fromJson(result, Map.class);
         ArrayList<Object> photosMapsTmp = (ArrayList<Object>) root.get(RESPONSE);
         if (firstElementCount) {
             count = ((Double) photosMapsTmp.get(0)).intValue();
@@ -253,7 +265,7 @@ public class VKDownloader {
             System.out.println("obj : " + obj);
             photosMaps.add((Map<String, Object>) obj);
         }
-        ;
+
         // ArrayList<Map<String, Object>> photosMaps = (ArrayList<Map<String, Object>>) root.get(RESPONSE);
         for (Map photoMap : photosMaps) {
 
@@ -263,7 +275,7 @@ public class VKDownloader {
             String[] keys = {"src_xxxbig", "src_xxbig", "src_xbig", "src_big", "src"};
             for (String key : keys) {
                 src = (String) photoMap.get(key);
-                if (src != null && src != "null") {
+                if (src != null && !src.equals("null")) {
                     break;
                 }
             }
@@ -339,7 +351,7 @@ public class VKDownloader {
             }
             URI uri = builder.build();
             HttpGet httpGet = new HttpGet(uri);
-            String result = makeRequest(httpGet);
+            Map result = makeRequest(httpGet);
 
             System.out.println("getAudio : " + result);
 
@@ -350,9 +362,8 @@ public class VKDownloader {
         }
     }
 
-    private void parseTracks(String result) {
-        tracks = new ArrayList<Track>();
-        Map root = new Gson().fromJson(result, Map.class);
+    private void parseTracks(Map root) {
+        tracks = new ArrayList<>();
         ArrayList<Map<String, Object>> audioMaps = (ArrayList<Map<String, Object>>)
                 ((Map<String, Object>) root.get(RESPONSE)).get(ITEMS);
         for (Map audioMap : audioMaps) {
