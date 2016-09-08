@@ -1,5 +1,7 @@
 package core;
 
+import org.apache.http.util.TextUtils;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,8 +37,21 @@ public class Album {
     }
 
     public void setTitle(String title) {
+
+        if (TextUtils.isEmpty(title)) {
+            title = "";
+        }
+        title = sanitizeFilename(title);
+        if (TextUtils.isEmpty(title)) {
+            title = "unknown";
+        }
         this.title = title;
     }
+
+    public static String sanitizeFilename(String name) {
+        return name.replaceAll("[:\\\\/*?|<>]", "");
+    }
+
 
     public String getTitle() {
         return title;

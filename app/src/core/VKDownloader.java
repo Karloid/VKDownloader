@@ -104,8 +104,12 @@ public class VKDownloader {
     }
 
     private void parseAlbums(Map root) {
-        albums = new ArrayList<Album>();
+        albums = new ArrayList<>();
         ArrayList<Map<String, Object>> albumsMaps = (ArrayList<Map<String, Object>>) root.get(RESPONSE);
+        if (albumsMaps == null) {
+            System.out.println("WARN parseAlbums: empty albums");
+            return;
+        }
         for (Map albumMap : albumsMaps) {
             Double aid = (Double) albumMap.get(AID);
             long aidLong = aid.longValue();
