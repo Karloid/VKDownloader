@@ -17,9 +17,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 
 public class VKDownloader {
@@ -60,6 +58,8 @@ public class VKDownloader {
     private ArrayList<Album> albums;
     private List<Track> tracks;
     private int nThreads = 10;
+    private int downloadedPhotosCount;
+    private int downloadedTracksCount;
 
     public void init() {
         loadProperties();
@@ -306,7 +306,7 @@ public class VKDownloader {
     }
 
     public void saveAlbumsPhotos(String folderToSave) {
-        ExecutorService executor = Executors.newFixedThreadPool(nThreads);
+        MyDownloadExecutor executor = new MyDownloadExecutor(nThreads);
         for (Album album : albums) {
             File folder = new File(folderToSave + album.getAid() + "_" + fixWindowsFileName(album.getTitle()));
             boolean success = folder.mkdirs();
@@ -314,15 +314,18 @@ public class VKDownloader {
             for (Photo photo : album.getPhotos()) {
                 File dest = new File(folder.getAbsolutePath() + "/" + photo.getFileName());
 
-                if (!dest.exists() || dest.length() < 100) {
-                    executor.execute(new Downloader(photo.getSrc(), dest));
-
+                if (!dest.exists() || dest.length() < 120) {
+                    executor.jobsCountInc();
+                    executor.execute(new Downloader(photo.getSrc(), dest, executor));
+                    downloadedPhotosCount++;
                 } else {
                     System.out.println(dest + " already exists");
                 }
             }
         }
-        executor.shutdown();
+        if (downloadedPhotosCount == 0) {
+            executor.shutdown();
+        }
         try {
             executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
         } catch (InterruptedException e) {
@@ -334,10 +337,6 @@ public class VKDownloader {
 
     public void setAccessToken(String accessToken) {
         this.accessToken = accessToken;
-    }
-
-    public String getAccessToken() {
-        return accessToken;
     }
 
     public void getTracks(String paramUid, String paramGid) {
@@ -379,23 +378,26 @@ public class VKDownloader {
         }
     }
 
-    public void saveTracksMultithreading(String folderToSave) {
+    public void saveTracks(String folderToSave) {
         File folder = new File(folderToSave);
         boolean success = folder.mkdirs();
         System.out.println("created folder: " + folder.getAbsolutePath() + " " + (success ? "created" : ""));
-        ExecutorService executor = Executors.newFixedThreadPool(nThreads);
-
+        MyDownloadExecutor executor = new MyDownloadExecutor(nThreads);
 
         for (Track track : tracks) {
             String fileName = fixWindowsFileName(track.getFileName()) + ".mp3";
             File dest = new File(folder.getAbsolutePath() + "/" + fileName);
             if (!dest.exists() || dest.length() < MINIMUM_TRACK_SIZE) {
-                executor.execute(new Downloader(track.getUrl(), dest));
+                executor.jobsCountInc();
+                executor.execute(new Downloader(track.getUrl(), dest, executor));
+                downloadedTracksCount++;
             } else {
                 System.out.println(dest + " already exists");
             }
         }
-        executor.shutdown();
+        if (downloadedPhotosCount == 0) {
+            executor.shutdown();
+        }
         try {
             executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
         } catch (InterruptedException e) {
@@ -408,17 +410,10 @@ public class VKDownloader {
 
 
     private static String fixWindowsFileName(String pathname) {
-        /*String[] forbiddenSymbols = new String[]{"<", ">", ":", "\"", "/", "\\", "|", "?", "*"}; // для windows
-        String result = pathname;
-        for (String forbiddenSymbol : forbiddenSymbols) {
-            result = result.replace(forbiddenSymbol, "");
-        }
-        // амперсанд в названиях передаётся как '& amp', приводим его к читаемому виду
-        return result;*/
         return Util.sanitizeFilename(pathname);
     }
 
-    public int getDownloadedPhotosCount() {
+    public int getTotalPhotosCount() {
         int count = 0;
         for (Album album : albums) {
             count += album.getPhotos().size();
@@ -426,19 +421,28 @@ public class VKDownloader {
         return count;
     }
 
-    public int getDownloadedTracksCount() {
+    public int getTotalTracksCount() {
         return tracks.size();
+    }
+
+    public int getDownloadedPhotosCount() {
+        return downloadedPhotosCount;
+    }
+
+    public int getDownloadedTracksCount() {
+        return downloadedTracksCount;
     }
 
     private class Downloader implements Runnable {
         private final File dest;
+        private MyDownloadExecutor executor;
         private final String url;
 
-        public Downloader(String url, File dest) {
+        public Downloader(String url, File dest, MyDownloadExecutor executor) {
             this.url = url;
             this.dest = dest;
+            this.executor = executor;
         }
-
 
         @Override
         public void run() {
@@ -446,10 +450,13 @@ public class VKDownloader {
             try {
                 FileUtils.copyURLToFile(new URL(url), dest);
                 System.out.println(dest + " done");
+                executor.jobDone();
             } catch (IOException e) {
                 System.out.println(dest + " error: ");
                 e.printStackTrace();
-                System.out.println(dest + " Deleting! " + dest.delete());
+                System.out.println(dest + " deleting file... result: " + dest.delete());
+                System.out.println(dest + " schedule new attempt after few seconds");
+                executor.retryWithDelay(this);
             }
         }
     }

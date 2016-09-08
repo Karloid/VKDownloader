@@ -3,9 +3,6 @@ package gui;
 import core.VKDownloader;
 
 import javax.swing.*;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.*;
 import java.util.Properties;
 
@@ -202,17 +199,15 @@ public class VkontaktePanel extends JPanel {
         }
         String folderToSave = destField.getText();
         vkDownloader.downloadAllPhotos(paramUid, paramGid, folderToSave);
-        JOptionPane.showMessageDialog(null, "Downloaded " + vkDownloader.getDownloadedPhotosCount() + " files to "+ destField.getText());
+        JOptionPane.showMessageDialog(null, "Total photos: " + vkDownloader.getTotalPhotosCount() + "; Downloaded: " + vkDownloader.getDownloadedPhotosCount() + " files to " + destField.getText());
     }
 
-
-
     private boolean validateFields() {
-        return true;
+        return true; //TODO?
     }
 
     private void saveAudio() {      /*
-        VKDownloader vkDownloader = new VKDownloader();
+        VKDownloader vkDownloader = new VKDownloader();   //TODO remove?
         vkDownloader.init();
         vkDownloader.setAccessToken(accessTokenField.getText());
         String paramUid = null;
@@ -227,7 +222,7 @@ public class VkontaktePanel extends JPanel {
         }
         String folderToSave = destField.getText();
         vkDownloader.downloadAllPhotos(paramUid, paramGid, folderToSave);
-        JOptionPane.showMessageDialog(null, "Downloaded " + vkDownloader.getDownloadedPhotosCount() + " files to "+ destField.getText());
+        JOptionPane.showMessageDialog(null, "Downloaded " + vkDownloader.getTotalPhotosCount() + " files to "+ destField.getText());
         */
 
         System.out.println("save audio");
@@ -249,8 +244,8 @@ public class VkontaktePanel extends JPanel {
         }
         vkDownloader.getTracks(paramUid, paramGid);
         String folderToSave = destField.getText();
-        vkDownloader.saveTracksMultithreading(folderToSave);
-        JOptionPane.showMessageDialog(null, "Downloaded " + vkDownloader.getDownloadedTracksCount() + " files to "+ destField.getText());
+        vkDownloader.saveTracks(folderToSave);
+        JOptionPane.showMessageDialog(null, "Total count of tracks: " + vkDownloader.getTotalTracksCount() + "; Downloaded: " + vkDownloader.getDownloadedTracksCount() + " files to " + destField.getText());
 
     }
 }

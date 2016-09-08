@@ -16,7 +16,7 @@ public class TestDrive {
         String paramUid = "xx";
         String paramGid = null;
         vkDownloader.getTracks(paramUid, paramGid);
-        vkDownloader.saveTracksMultithreading("xx");
+        vkDownloader.saveTracks("xx");
     }
 
     private static void testPhoto() {
