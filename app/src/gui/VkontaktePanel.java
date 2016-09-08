@@ -252,9 +252,5 @@ public class VkontaktePanel extends JPanel {
         vkDownloader.saveTracksMultithreading(folderToSave);
         JOptionPane.showMessageDialog(null, "Downloaded " + vkDownloader.getDownloadedTracksCount() + " files to "+ destField.getText());
 
-
-
     }
-
-
 }

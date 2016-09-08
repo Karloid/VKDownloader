@@ -308,7 +308,7 @@ public class VKDownloader {
     public void saveAlbumsPhotos(String folderToSave) {
         ExecutorService executor = Executors.newFixedThreadPool(nThreads);
         for (Album album : albums) {
-            File folder = new File(folderToSave + album.getAid() + "_" + album.getTitle());
+            File folder = new File(folderToSave + album.getAid() + "_" + fixWindowsFileName(album.getTitle()));
             boolean success = folder.mkdirs();
             System.out.println("created folder: " + folder.getAbsolutePath() + " " + success);
             for (Photo photo : album.getPhotos()) {
@@ -366,6 +366,7 @@ public class VKDownloader {
 
     private void parseTracks(Map root) {
         tracks = new ArrayList<>();
+        //noinspection unchecked
         ArrayList<Map<String, Object>> audioMaps = (ArrayList<Map<String, Object>>)
                 ((Map<String, Object>) root.get(RESPONSE)).get(ITEMS);
         for (Map audioMap : audioMaps) {
@@ -386,7 +387,7 @@ public class VKDownloader {
 
 
         for (Track track : tracks) {
-            String fileName = fixWndowsFileName(track.getFileName()) + ".mp3";
+            String fileName = fixWindowsFileName(track.getFileName()) + ".mp3";
             File dest = new File(folder.getAbsolutePath() + "/" + fileName);
             if (!dest.exists() || dest.length() < MINIMUM_TRACK_SIZE) {
                 executor.execute(new Downloader(track.getUrl(), dest));
@@ -406,14 +407,15 @@ public class VKDownloader {
     }
 
 
-    private static String fixWndowsFileName(String pathname) {
-        String[] forbiddenSymbols = new String[]{"<", ">", ":", "\"", "/", "\\", "|", "?", "*"}; // для windows
+    private static String fixWindowsFileName(String pathname) {
+        /*String[] forbiddenSymbols = new String[]{"<", ">", ":", "\"", "/", "\\", "|", "?", "*"}; // для windows
         String result = pathname;
         for (String forbiddenSymbol : forbiddenSymbols) {
             result = result.replace(forbiddenSymbol, "");
         }
         // амперсанд в названиях передаётся как '& amp', приводим его к читаемому виду
-        return result;
+        return result;*/
+        return Util.sanitizeFilename(pathname);
     }
 
     public int getDownloadedPhotosCount() {
