@@ -1,0 +1,7 @@
+# Created by .ignore support plugin (hsz.mobi)
+config.prop
+.idea/
+VKDownloader.iml
+out/artifacts/VKDownloader_jar/VKDownloader.jar
+out/artifacts/VKDownloader_jar/run.bat
+out/
